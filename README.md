@@ -1,6 +1,6 @@
 # LED Matrix Remote Control
  
-Project about remotely controlled LED Matrix via Bluetooth
+Project about remote controlled LED Matrix via Bluetooth
 
 Devices:
 - Arduino UNO
