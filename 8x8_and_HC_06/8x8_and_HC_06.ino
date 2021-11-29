@@ -4,10 +4,10 @@
 #define CLK 8
 #define left_switch 13
 #define right_switch 12
-LedControl lc = LedControl(DIN, CLK, CS, 4);  //LedControl(dataPin,clockPin,csPin,numDevices)
-String received_data;
-String modes = "    ";  //'h' - heart, 'p' - pacman, 's' - stairs, ''
 
+LedControl lc = LedControl(DIN, CLK, CS, 4);  //LedControl(dataPin,clockPin,csPin,numDevices)
+
+String modes = "    ";  //'h' - heart, 'p' - pacman, 's' - stairs, ''
 
 //patterns
 byte heart1[8] = {0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18, 0x00};
@@ -35,16 +35,8 @@ unsigned long stairs_t = millis();
 unsigned long pacman_t = millis();
 uint8_t stairs_i = 0;
 uint8_t pacman_i = 0;
-uint8_t prescaler = 1;
+uint8_t prescaler = 4; //gif changing freq prescaler
 
-/*AVAILABLE received_dataS
-  heart
-  pacman
-  draw
-  stairs
-  dice
-  snake
-*/
 void setup() 
 {
 	for (int i=0; i<4; i++) 
@@ -64,9 +56,11 @@ void loop()
   {
 		receive_data();
 	}
+
+  //GIFs
 	for (int i = 0; i < modes.length(); i++) 
   { 
-		if (modes.indexOf('s') != -1) 
+		if (modes.indexOf('s') != -1) //stairs
     {
       if(millis() - stairs_t >= 4000/prescaler)
       {
@@ -76,7 +70,7 @@ void loop()
         stairs_t = millis();
       }
 		} 
-    if ((modes.indexOf('p') != -1)) 
+    if ((modes.indexOf('p') != -1))  //pacman
     { 
       if(millis() - pacman_t >= 2000/prescaler)
       {
@@ -86,7 +80,7 @@ void loop()
         pacman_t = millis();
       }
 		} 
-    if ((modes.indexOf('h') != -1))
+    if ((modes.indexOf('h') != -1)) //heart
     {
       if(millis() - heart_t >= 2000/prescaler)
       {
@@ -99,7 +93,7 @@ void loop()
 
 void receive_data() 
 {
-	received_data = Serial.readString();
+	String received_data = Serial.readString();
 
   String cmd[4] = {"ch1", "ch2", "ch3", "ch4"};
 
@@ -111,7 +105,7 @@ void receive_data()
     } 
   }
   
-  if (received_data.indexOf("sl") != -1)
+  if (received_data.indexOf("sl") != -1) //SLIDER HANDLE
   {
     if(prescaler >= 1 and prescaler <=9)
     {
@@ -154,7 +148,7 @@ void receive_data()
   }
 }
 
-void print_pattern(byte value[], uint8_t addr) 
+void print_pattern(byte *value, uint8_t addr) 
 {
 	for (int i = 0; i < 8; i++) 
   {
@@ -171,7 +165,7 @@ void heart(bool state)
       state == 1 ? print_pattern(heart2, i) : print_pattern(heart1, i);
     }
   }	
-  heart_state = !state;
+  heart_state = !state; //TOGGLE HEART STATE
 }
 
 void pacman() 
@@ -180,30 +174,25 @@ void pacman()
   {
     for (int i=0; i<4; i++) 
     {
-    if (modes[i] == 'p') print_pattern(pacman1, i);
+      if (modes[i] == 'p') print_pattern(pacman1, i); //FIRST FRAME
     } 
   }
-  
-  else if(pacman_i>=0 and pacman_i<4)
+  else if(pacman_i >= 0 and pacman_i < 4)
   {
     for (int j = 0; j < 4; j++) 
     {
 		  if (modes[j] == 'p') 
       {
 				lc.setLed(j, 3, 7 - pacman_i, 1);
-				if (pacman_i > 0) 
-        {
-					lc.setLed(j, 3, 7 - pacman_i + 1, 0);
-				}
+				lc.setLed(j, 3, 7 - pacman_i + 1, 0);
 			}
     }
   }
-
   else
   {
     for (int i=0; i<4; i++) 
     {
-      if (modes[i] == 'p') print_pattern(pacman2, i);
+      if (modes[i] == 'p') print_pattern(pacman2, i); //END FRAME
     }
   }
 }
@@ -211,7 +200,7 @@ void pacman()
 void draw() 
 {
   reset_mode();	
-	for (int i = 0; i < 10; i++) 
+	for (int i = 0; i < 10; i++) //10 RANDOM NUMBERS
   {
     for (int j = 0; j < 4; j++) 
     {
@@ -223,7 +212,7 @@ void draw()
 				byte x[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 				for (int i = 0; i < 5; i++) 
         {
-					x[i + 2] = 16 *numbers[v1][i] + numbers[v2][i]; // *16 - shift register left 4 bits
+					x[i + 2] = 16 * numbers[v1][i] + numbers[v2][i]; // *16 - shift register - 4 bits left
 				}
 				print_pattern(x, j);
 			}
@@ -235,17 +224,14 @@ void draw()
 void dice() 
 {
   reset_mode();
-  
-	for (int j = 0; j < 7; j++) 
+	for (int j = 0; j < 7; j++) //7 DICES DRAWING 
   {
 		for (int k = 0; k < 4; k++) 
     {
 			if (matrixes[k]) 
       {
-				int v1 = random(1, 7);    //<1;6>
-				int v2 = random(1, 7);
 				lc.clearDisplay(k);
-				int v[2] = {v1, v2};
+				int v[2] = {(int) random(1, 7), (int) random(1, 7)}; // 2x <1; 6>
 
 				for (int i = 0; i < 2; i++) 
         {
@@ -289,18 +275,18 @@ void dice()
 
 void stairs() 
 {
-  if(stairs_i == 0)
+  if(stairs_i == 0) //FIRST FRAME - CLEAR DISPLAY
   {
     for (int i=0; i<4; i++)
     {
-    if(modes[i] == 's')
+      if(modes[i] == 's')
       {
-      lc.clearDisplay(i);
+        lc.clearDisplay(i);
       }
     }
   }
 
-	for (int j = 7; j >= stairs_i; j--) 
+	for (int j = 7; j >= stairs_i; j--)  //NEXT FRAMES
   {
 		for (int k = 0; k < 4; k++) 
     {
@@ -310,7 +296,6 @@ void stairs()
 		  }
 		}
   }
-	
 }
 
 void snake() 
