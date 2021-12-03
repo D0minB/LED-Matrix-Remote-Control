@@ -10,10 +10,10 @@ LedControl lc = LedControl(DIN, CLK, CS, 4);  //LedControl(dataPin,clockPin,csPi
 String modes = "    ";  //'h' - heart, 'p' - pacman, 's' - stairs, ''
 
 //patterns
-byte heart1[8] = {0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18, 0x00};
-byte heart2[8] = {0x66, 0x99, 0x81, 0x81, 0x42, 0x24, 0x18, 0x00};
-byte pacman1[8] = {0x38, 0x44, 0x88, 0x90, 0x88, 0x44, 0x38, 0x00};
-byte pacman2[8] = {0x38, 0x44, 0x82, 0x82, 0x82, 0x44, 0x38, 0x00};
+byte heart1[7] = {0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18};
+byte heart2[7] = {0x66, 0x99, 0x81, 0x81, 0x42, 0x24, 0x18};
+byte pacman1[7] = {0x38, 0x44, 0x88, 0x90, 0x88, 0x44, 0x38};
+byte pacman2[7] = {0x38, 0x44, 0x82, 0x82, 0x82, 0x44, 0x38};
 byte zero[5] = {0x07, 0x05, 0x05, 0x05, 0x07};
 byte one[5] = {0x01, 0x01, 0x01, 0x01, 0x01};
 byte two[5] = {0x07, 0x01, 0x07, 0x04, 0x07};
@@ -33,6 +33,7 @@ bool heart_state = 0;
 unsigned long heart_t = millis();
 unsigned long stairs_t = millis();
 unsigned long pacman_t = millis();
+unsigned long random_num_t = millis();
 uint8_t stairs_i = 0;
 uint8_t pacman_i = 0;
 uint8_t prescaler = 4; //gif changing freq prescaler
@@ -80,7 +81,7 @@ void loop()
         pacman_t = millis();
       }
 		} 
-    if ((modes.indexOf('h') != -1)) //heart
+    if (modes.indexOf('h') != -1) //heart
     {
       if(millis() - heart_t >= 2000/prescaler)
       {
@@ -88,6 +89,14 @@ void loop()
         heart(heart_state);
       }
 		}
+   if (modes.indexOf('r') != -1)
+   {
+      if(millis() - random_num_t >= 2000/prescaler)
+      {
+        random_num_t = millis();
+        random_pattern();
+      }
+   }
 	}
 }
 
@@ -124,11 +133,11 @@ void receive_data()
   {
 		draw();	
 	} 
-  else if (received_data.indexOf("heart") != -1 or received_data.indexOf("pacman") != -1 or received_data.indexOf("stairs") != -1) 
+  else if (received_data.indexOf("heart") != -1 or received_data.indexOf("pacman") != -1 or received_data.indexOf("stairs") != -1 or received_data.indexOf("random") != -1) 
   {
-    String tab[3] = {"heart", "pacman", "stairs"};
+    String tab[4] = {"heart", "pacman", "stairs", "random"};
     
-    for(int j=0; j<3; j++)
+    for(int j=0; j<4; j++)
     {
       if(received_data.indexOf(tab[j]) != -1)
       {
@@ -148,9 +157,9 @@ void receive_data()
   }
 }
 
-void print_pattern(byte *value, uint8_t addr) 
+void print_pattern(byte *value, uint8_t n, uint8_t addr) 
 {
-	for (int i = 0; i < 8; i++) 
+	for (int i = 0; i < n; i++) 
   {
 		lc.setRow(addr, i, value[i]);
 	}
@@ -162,7 +171,7 @@ void heart(bool state)
   {
     if (modes[i] == 'h') 
     {
-      state == 1 ? print_pattern(heart2, i) : print_pattern(heart1, i);
+      state == 1 ? print_pattern(heart2, sizeof(heart2), i) : print_pattern(heart1, sizeof(heart1), i);
     }
   }	
   heart_state = !state; //TOGGLE HEART STATE
@@ -174,7 +183,7 @@ void pacman()
   {
     for (int i=0; i<4; i++) 
     {
-      if (modes[i] == 'p') print_pattern(pacman1, i); //FIRST FRAME
+      if (modes[i] == 'p') print_pattern(pacman1, sizeof(pacman1), i); //FIRST FRAME
     } 
   }
   else if(pacman_i >= 0 and pacman_i < 4)
@@ -192,7 +201,7 @@ void pacman()
   {
     for (int i=0; i<4; i++) 
     {
-      if (modes[i] == 'p') print_pattern(pacman2, i); //END FRAME
+      if (modes[i] == 'p') print_pattern(pacman2, sizeof(pacman2), i); //END FRAME
     }
   }
 }
@@ -214,7 +223,7 @@ void draw()
         {
 					x[i + 2] = 16 * numbers[v1][i] + numbers[v2][i]; // *16 - shift register - 4 bits left
 				}
-				print_pattern(x, j);
+				print_pattern(x, sizeof(x), j);
 			}
     }
     delay(100); 
@@ -375,3 +384,17 @@ void clear()
     }
   }
 }
+
+void random_pattern()
+{
+  byte rand_num[8] = {byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255))};
+
+  for(int i=0; i<4; i++)
+  {
+    if(modes[i] == 'r')
+    {
+      print_pattern(rand_num, sizeof(rand_num), i); 
+    }
+  }
+}
+  
