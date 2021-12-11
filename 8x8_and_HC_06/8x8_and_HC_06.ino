@@ -1,4 +1,5 @@
 #include <LedControl.h>
+
 #define DIN 10
 #define CS 9
 #define CLK 8
@@ -28,14 +29,44 @@ byte *numbers[10] = {zero, one, two, three, four, five, six, seven, eight, nine}
 byte dice5[3] = {0xA0, 0x40, 0xA0};
 byte dice6[3] = {0xA0, 0xA0, 0xA0};
 
+byte A[7] = {0x38,0x44,0x44,0x44,0x7C,0x44,0x44};
+byte B[7] = {0x3C,0x22,0x22,0x3C,0x22,0x22,0x3C};
+byte C[7] = {0x1C,0x20,0x20,0x20,0x20,0x20,0x1C};
+byte D[7] = {0x38,0x24,0x22,0x22,0x22,0x24,0x38};
+byte E[7] = {0x3E,0x20,0x20,0x3C,0x20,0x20,0x3E};
+byte F[7] = {0x3E,0x20,0x20,0x3C,0x20,0x20,0x20};
+byte G[7] = {0x1C,0x22,0x20,0x2E,0x22,0x22,0x1E};
+byte H[7] = {0x22,0x22,0x22,0x3E,0x22,0x22,0x22};
+byte I[7] = {0x1C,0x08,0x08,0x08,0x08,0x08,0x1C};
+byte J[7] = {0x38,0x08,0x08,0x08,0x08,0x28,0x18};
+byte K[7] = {0x22,0x24,0x28,0x30,0x28,0x24,0x22};
+byte L[7] = {0x20,0x20,0x20,0x20,0x20,0x20,0x3E};
+byte M[7] = {0x22,0x36,0x2A,0x2A,0x22,0x22,0x22};
+byte N[7] = {0x22,0x22,0x32,0x2A,0x26,0x22,0x22};
+byte O[7] = {0x1C,0x22,0x22,0x22,0x22,0x22,0x1C};
+byte P[7] = {0x3C,0x22,0x22,0x3C,0x20,0x20,0x20};
+byte Q[7] = {0x1C,0x22,0x22,0x22,0x2A,0x24,0x1A};
+byte R[7] = {0x3C,0x22,0x22,0x3C,0x28,0x24,0x22};
+byte S[7] = {0x1E,0x20,0x20,0x1C,0x02,0x02,0x3C};
+byte T[7] = {0x3E,0x08,0x08,0x08,0x08,0x08,0x08};
+byte U[7] = {0x22,0x22,0x22,0x22,0x22,0x22,0x1C};
+byte V[7] = {0x22,0x22,0x22,0x22,0x22,0x14,0x08};
+byte W[7] = {0x22,0x22,0x22,0x2A,0x2A,0x2A,0x14};
+byte X[7] = {0x22,0x22,0x14,0x08,0x14,0x22,0x22};
+byte Y[7] = {0x22,0x22,0x22,0x14,0x08,0x08,0x08};
+byte Z[7] = {0x3E,0x02,0x04,0x08,0x10,0x20,0x3E};
+byte *letters[26] = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z}; //ASCII TABLE: 65 - 'A', 66 - 'B', ...
+
 bool matrixes[4] = {0, 0, 0, 0};
 bool heart_state = 0;
 unsigned long heart_t = millis();
 unsigned long stairs_t = millis();
 unsigned long pacman_t = millis();
+unsigned long text_t = millis();
 unsigned long random_num_t = millis();
 uint8_t stairs_i = 0;
 uint8_t pacman_i = 0;
+uint8_t text_i = 0;
 uint8_t prescaler = 4; //gif changing freq prescaler
 
 void setup() 
@@ -46,6 +77,9 @@ void setup()
 		lc.setIntensity(i, 1);  //address, intensity (0-15)
 		lc.clearDisplay(i);
 	}
+
+  randomSeed(analogRead(0)); //random generator initialization, noise from analog input
+  
 	Serial.begin(9600);
 	pinMode(left_switch, INPUT_PULLUP);
 	pinMode(right_switch, INPUT_PULLUP);
@@ -97,7 +131,23 @@ void loop()
         random_pattern();
       }
    }
+   if(modes.indexOf('t') != -1)
+   {
+      String txt = "ab";
+      txt.toUpperCase();
+
+      if(millis() - text_t >= 3000/prescaler)
+      {
+        text_t = millis();
+        if(text_i > txt.length() + 2) 
+        {
+          text_i=0;   
+        }
+        display_text(txt, text_i);
+        text_i++;        
+   }
 	}
+}
 }
 
 void receive_data() 
@@ -133,11 +183,12 @@ void receive_data()
   {
 		draw();	
 	} 
-  else if (received_data.indexOf("heart") != -1 or received_data.indexOf("pacman") != -1 or received_data.indexOf("stairs") != -1 or received_data.indexOf("random") != -1) 
+  else if (received_data.indexOf("heart") != -1 or received_data.indexOf("pacman") != -1 or received_data.indexOf("stairs") != -1 or received_data.indexOf("random") != -1
+          or received_data.indexOf("text") != -1) 
   {
-    String tab[4] = {"heart", "pacman", "stairs", "random"};
+    String tab[5] = {"heart", "pacman", "stairs", "random", "text"};
     
-    for(int j=0; j<4; j++)
+    for(int j=0; j<sizeof(tab); j++)
     {
       if(received_data.indexOf(tab[j]) != -1)
       {
@@ -183,7 +234,11 @@ void pacman()
   {
     for (int i=0; i<4; i++) 
     {
-      if (modes[i] == 'p') print_pattern(pacman1, sizeof(pacman1), i); //FIRST FRAME
+      if (modes[i] == 'p') 
+      {
+        lc.clearDisplay(i);
+        print_pattern(pacman1, sizeof(pacman1), i); //FIRST FRAME}
+      }
     } 
   }
   else if(pacman_i >= 0 and pacman_i < 4)
@@ -215,7 +270,7 @@ void draw()
     {
 		  if (matrixes[j]) 
       {
-				int v = random(0, 100); //<0;99>
+				int v = random(100); //<0;99>
 				int v1 = v / 10;
 				int v2 = v - v1 * 10;
 				byte x[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -265,14 +320,14 @@ void dice()
 						lc.setLed(k, 2 + 5 *i, 2 + 5 *i, 1);
 						break;
 						case 5:
-						lc.setRow(k, 0 + 5*i, dice5[0] / pow(32,i));
-						lc.setRow(k, 1 + 5*i, dice5[1] / pow(32,i));
-						lc.setRow(k, 2 + 5*i, dice5[2] / pow(32,i));
+						lc.setRow(k, 0 + 5*i, dice5[0] >> (5*i));
+						lc.setRow(k, 1 + 5*i, dice5[1] >> (5*i));
+						lc.setRow(k, 2 + 5*i, dice5[2] >> (5*i));
 						break;
 						case 6:
-						lc.setRow(k, 0 + 5*i, dice6[0] / pow(32,i));
-						lc.setRow(k, 1 + 5*i, dice6[1] / pow(32,i));
-						lc.setRow(k, 2 + 5*i, dice6[2] / pow(32,i));
+						lc.setRow(k, 0 + 5*i, dice6[0] >> (5*i));
+						lc.setRow(k, 1 + 5*i, dice6[1] >> (5*i));
+						lc.setRow(k, 2 + 5*i, dice6[2] >> (5*i));
 						break;
 					}
 				}
@@ -311,7 +366,7 @@ void snake()
 {
 	uint8_t pos_x[30] = {3, 4};
 	uint8_t pos_y[30] = {4, 4};
-	uint8_t fruit[2] = {(uint8_t) random(0, 8), (uint8_t) random(0, 8)};
+	uint8_t fruit[2] = {(uint8_t) random(8), (uint8_t) random(8)};
 	uint8_t snake_size = 2;
 	String dir = "left";
 	bool right = false;
@@ -341,8 +396,8 @@ void snake()
 			}
 			if (fruit[1] == pos_y[0] && fruit[0] == pos_x[0])	//SNAKE EATS FRUIT {
 				snake_size += 1;
-				fruit[0] = random(0, 8);
-				fruit[1] = random(0, 8);
+				fruit[0] = random(8);
+				fruit[1] = random(8);
 				pos_x[snake_size] = last_x;
 				pos_y[snake_size] = last_y;
 			}
@@ -387,7 +442,7 @@ void clear()
 
 void random_pattern()
 {
-  byte rand_num[8] = {byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255)),byte(random(0, 255))};
+  byte rand_num[8] = {byte(random(255)),byte(random(255)),byte(random(255)),byte(random(255)),byte(random(255)),byte(random(255)),byte(random(255)),byte(random(255))};
 
   for(int i=0; i<4; i++)
   {
@@ -395,6 +450,28 @@ void random_pattern()
     {
       print_pattern(rand_num, sizeof(rand_num), i); 
     }
-  }
+  }  
 }
-  
+
+void display_text(String text, uint8_t index)
+{
+    for(int i = 0; i < 4; i++)
+    {
+      lc.clearDisplay(i);
+    }
+
+    for(int i=0; i <= 4; i++)
+    {
+      if(index - i >= 0)
+      {
+        if((int)text[index-i] >= 65 and (int)text[index-i] <= 90) //LETTERS
+        {
+          print_pattern(letters[(int)text[index-i]-65], 7, i);  
+        }
+        else if((int)text[index-i] >= 48 and (int)text[index-i] <= 57) //NUMBERS
+        {
+          print_pattern(numbers[(int)text[index-i]-48], 5, i); 
+        }  
+      }
+    }        
+}
