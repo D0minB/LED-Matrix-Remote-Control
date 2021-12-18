@@ -3,8 +3,10 @@
 #define DIN 10
 #define CS 9
 #define CLK 8
-#define left_switch 13
-#define right_switch 12
+#define left_switch 11
+#define right_switch 13
+#define up_switch 12
+#define down_switch 7
 
 LedControl lc = LedControl(DIN, CLK, CS, 4);  //LedControl(dataPin,clockPin,csPin,numDevices)
 
@@ -68,6 +70,7 @@ uint8_t stairs_i = 0;
 uint8_t pacman_i = 0;
 uint8_t text_i = 0;
 uint8_t prescaler = 4; //gif changing freq prescaler
+String entered_text = "";
 
 void setup() 
 {
@@ -83,6 +86,8 @@ void setup()
 	Serial.begin(9600);
 	pinMode(left_switch, INPUT_PULLUP);
 	pinMode(right_switch, INPUT_PULLUP);
+  pinMode(up_switch, INPUT_PULLUP);
+  pinMode(down_switch, INPUT_PULLUP);
 }
 
 void loop() 
@@ -125,7 +130,7 @@ void loop()
 		}
    if (modes.indexOf('r') != -1)
    {
-      if(millis() - random_num_t >= 2000/prescaler)
+      if(millis() - random_num_t >= 4000/prescaler)
       {
         random_num_t = millis();
         random_pattern();
@@ -133,17 +138,14 @@ void loop()
    }
    if(modes.indexOf('t') != -1)
    {
-      String txt = "ab";
-      txt.toUpperCase();
-
       if(millis() - text_t >= 3000/prescaler)
       {
         text_t = millis();
-        if(text_i > txt.length() + 2) 
+        if(text_i > entered_text.length() + 2) 
         {
           text_i=0;   
         }
-        display_text(txt, text_i);
+        display_text(entered_text, text_i);
         text_i++;        
    }
 	}
@@ -182,23 +184,37 @@ void receive_data()
   else if (received_data.indexOf("draw") != -1) 
   {
 		draw();	
-	} 
+	}
+  else if (received_data.indexOf("*") != -1)
+  {
+    entered_text = received_data.substring(received_data.indexOf("*") + 1);
+    entered_text.toUpperCase();
+    text_i = 0;
+  }
   else if (received_data.indexOf("heart") != -1 or received_data.indexOf("pacman") != -1 or received_data.indexOf("stairs") != -1 or received_data.indexOf("random") != -1
           or received_data.indexOf("text") != -1) 
   {
     String tab[5] = {"heart", "pacman", "stairs", "random", "text"};
     
-    for(int j=0; j<sizeof(tab); j++)
+    for(int j=0; j<sizeof(tab)/sizeof(tab[0]); j++)
     {
       if(received_data.indexOf(tab[j]) != -1)
-      {
-        for (int i = 0; i < 4; i++) 
+      { 
+        if(received_data == "text")
         {
-			    if (matrixes[i]) 
+          modes = "tttt";
+        }
+        else
+        {
+          for (int i = 0; i < 4; i++) 
           {
-				    modes[i] = received_data[received_data.indexOf(tab[j])];
-			    }
-		    }
+            if (matrixes[i]) 
+            {
+              modes[i] = tab[j][0];
+            }
+          } 
+        }
+        
       }
     }
 	}
@@ -210,6 +226,7 @@ void receive_data()
 
 void print_pattern(byte *value, uint8_t n, uint8_t addr) 
 {
+  if(n < 8) lc.clearDisplay(addr);
 	for (int i = 0; i < n; i++) 
   {
 		lc.setRow(addr, i, value[i]);
@@ -236,7 +253,6 @@ void pacman()
     {
       if (modes[i] == 'p') 
       {
-        lc.clearDisplay(i);
         print_pattern(pacman1, sizeof(pacman1), i); //FIRST FRAME}
       }
     } 
@@ -270,9 +286,9 @@ void draw()
     {
 		  if (matrixes[j]) 
       {
-				int v = random(100); //<0;99>
-				int v1 = v / 10;
-				int v2 = v - v1 * 10;
+				uint8_t v = random(100); //<0;99>
+				uint8_t v1 = v / 10;
+				uint8_t v2 = v - v1 * 10;
 				byte x[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 				for (int i = 0; i < 5; i++) 
         {
@@ -295,7 +311,7 @@ void dice()
 			if (matrixes[k]) 
       {
 				lc.clearDisplay(k);
-				int v[2] = {(int) random(1, 7), (int) random(1, 7)}; // 2x <1; 6>
+				uint8_t v[2] = {(uint8_t) random(1, 7), (uint8_t) random(1, 7)}; // 2x <1; 6>
 
 				for (int i = 0; i < 2; i++) 
         {
@@ -362,59 +378,129 @@ void stairs()
   }
 }
 
-void snake() 
+int snake() 
 {
-	uint8_t pos_x[30] = {3, 4};
-	uint8_t pos_y[30] = {4, 4};
+	uint8_t pos_x[30] = {3, 4, 5};
+	uint8_t pos_y[30] = {4, 4, 4};
 	uint8_t fruit[2] = {(uint8_t) random(8), (uint8_t) random(8)};
-	uint8_t snake_size = 2;
+	uint8_t snake_size = 3;
 	String dir = "left";
 	bool right = false;
 	bool left = false;
 	unsigned long prev_time = millis();
 	bool end_game = false;
-	while (!end_game) {
-		if (millis() - prev_time >= (unsigned long) 500) {
+  
+	while (!end_game) 
+	{
+    String dir_cmd = "";
+    if(Serial.available())
+    {
+      dir_cmd = Serial.readString();
+    }  
+    
+    if((digitalRead(right_switch) == 0 or dir_cmd.indexOf("r") != -1) and dir != "left")
+    {
+      dir = "right";
+    }
+    else if((digitalRead(left_switch) == 0 or dir_cmd.indexOf("l") != -1) and dir != "right")
+    {
+      dir = "left";
+    }
+    else if((digitalRead(up_switch) == 0 or dir_cmd.indexOf("u") != -1) and dir != "down")
+    {
+      dir = "up";
+    }
+    else if((digitalRead(down_switch) == 0 or dir_cmd.indexOf("d") != -1) and dir != "up")
+    {
+      dir = "down";
+    }
+    else if(dir_cmd.indexOf("q") != -1)
+    {
+      Serial.print("end");
+      return 0; 
+    }
+
+
+		if (millis() - prev_time >= (unsigned long) 500)
+		{
 			prev_time = millis();
 			lc.clearDisplay(0);
-			if (digitalRead(right_switch) == 0) right = true;
-			if (digitalRead(left_switch) == 0) left = true;
-			if (right == true) {
-				if (dir == "up") dir = "right"; else if (dir == "down") dir = "left"; else if (dir == "right") dir = "down"; else dir = "up";
-				right = false;
-			} else if (left == true) {
-				if (dir == "up") dir = "left"; else if (dir == "down") dir = "right"; else if (dir == "right") dir = "up"; else dir = "down";
-				left = false;
-			}
+
 			lc.setLed(0, fruit[1], fruit[0], 1);
-			//SNAKE MOVEMENT
-			uint8_t last_x = pos_x[snake_size - 1];
-			uint8_t last_y = pos_y[snake_size - 1];
-			for (int i = 1; i < snake_size; i++) {
-				pos_x[i] = pos_x[i - 1];
-				pos_y[i] = pos_y[i - 1];
-			}
-			if (fruit[1] == pos_y[0] && fruit[0] == pos_x[0])	//SNAKE EATS FRUIT {
+
+      //SNAKE MOVEMENT
+      uint8_t last_x = pos_x[snake_size - 1];
+      uint8_t last_y = pos_y[snake_size - 1];
+      
+      for (int i = snake_size - 1; i >= 1; i--) 
+      {
+        pos_x[i] = pos_x[i - 1];
+        pos_y[i] = pos_y[i - 1];
+      }
+      
+			if (fruit[1] == pos_y[0] && fruit[0] == pos_x[0])	//SNAKE EATS FRUIT 
+			{
 				snake_size += 1;
 				fruit[0] = random(8);
 				fruit[1] = random(8);
-				pos_x[snake_size] = last_x;
-				pos_y[snake_size] = last_y;
+				pos_x[snake_size - 1] = last_x;
+				pos_y[snake_size - 1] = last_y;
 			}
-			if (dir == "left") {
+
+			if (dir == "left") 
+			{
 				pos_x[0] - 1 >= 0 ? pos_x[0] -= 1 : pos_x[0] = 7;
-			} else if (dir == "right") {
+			} 
+			else if (dir == "right") 
+			{
 				pos_x[0] + 1 <= 7 ? pos_x[0] += 1 : pos_x[0] = 0;
-			} else if (dir == "up") {
+			} 
+			else if (dir == "up") 
+			{
 				pos_y[0] - 1 >= 0 ? pos_y[0] -= 1 : pos_y[0] = 7;
-			} else if (dir == "down") {
+			} 
+			else if (dir == "down") 
+			{
 				pos_y[0] + 1 <= 7 ? pos_y[0] += 1 : pos_y[0] = 0;
 			}
+     
 			for (int i = 0; i < snake_size; i++) 
       {
 				lc.setLed(0, pos_y[i], pos_x[i], 1);
 			}
+
+      //GAME END
+      for(int i=0; i < snake_size; i++)
+      {
+        for(int j=0; j < i; j++)
+        {
+          if(pos_x[i] == pos_x[j] and pos_y[i] == pos_y[j])
+          {
+            end_game = true;
+          }
+        }
+      }
 		}
+  }
+  lc.clearDisplay(0);
+
+  //DISPLAY POINTS
+  uint8_t pts = snake_size - 3; 
+  uint8_t p1 = pts / 10;
+  uint8_t p2 = pts - p1 * 10;
+      
+  byte x[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  for (int i = 0; i < 5; i++) 
+  {
+    x[i + 2] = 16 * numbers[p1][i] + numbers[p2][i]; // *16 - shift register - 4 bits left
+  }
+  print_pattern(x, sizeof(x), 0);
+
+  //WAIT 5SEC
+  delay(5000);
+
+  //NEW GAME
+  snake();
 }
 
 void reset_mode()
@@ -430,13 +516,12 @@ void reset_mode()
 
 void clear()
 {
+  modes = "    ";
   for (int i=0; i<4; i++)
   {
-    if(matrixes[i])
-    {
-      modes[i] = ' ';
-      lc.clearDisplay(i);
-    }
+    lc.clearDisplay(i);
+    matrixes[i] = 0;
+    
   }
 }
 
