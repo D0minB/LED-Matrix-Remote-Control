@@ -416,7 +416,6 @@ int snake()
     }
     else if(dir_cmd.indexOf("q") != -1)
     {
-      Serial.print("end");
       return 0; 
     }
 
