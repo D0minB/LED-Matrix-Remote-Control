@@ -288,7 +288,7 @@ void draw()
       {
 				uint8_t v = random(100); //<0;99>
 				uint8_t v1 = v / 10;
-				uint8_t v2 = v - v1 * 10;
+				uint8_t v2 = v % 10;
 				byte x[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 				for (int i = 0; i < 5; i++) 
         {
@@ -380,10 +380,10 @@ void stairs()
 
 int snake() 
 {
-	uint8_t pos_x[30] = {3, 4, 5};
-	uint8_t pos_y[30] = {4, 4, 4};
-	uint8_t fruit[2] = {(uint8_t) random(8), (uint8_t) random(8)};
-	uint8_t snake_size = 3;
+	uint8_t pos_x[30] = {3, 4, 5, 6};
+	uint8_t pos_y[30] = {4, 4, 4, 4};
+	uint8_t fruit[3] = {(uint8_t) random(24), (uint8_t) random(8)};
+	uint8_t snake_size = 4;
 	String dir = "left";
 	bool right = false;
 	bool left = false;
@@ -392,40 +392,15 @@ int snake()
   
 	while (!end_game) 
 	{
-    String dir_cmd = "";
-    if(Serial.available())
-    {
-      dir_cmd = Serial.readString();
-    }  
-    
-    if((digitalRead(right_switch) == 0 or dir_cmd.indexOf("r") != -1) and dir != "left")
-    {
-      dir = "right";
-    }
-    else if((digitalRead(left_switch) == 0 or dir_cmd.indexOf("l") != -1) and dir != "right")
-    {
-      dir = "left";
-    }
-    else if((digitalRead(up_switch) == 0 or dir_cmd.indexOf("u") != -1) and dir != "down")
-    {
-      dir = "up";
-    }
-    else if((digitalRead(down_switch) == 0 or dir_cmd.indexOf("d") != -1) and dir != "up")
-    {
-      dir = "down";
-    }
-    else if(dir_cmd.indexOf("q") != -1)
-    {
-      return 0; 
-    }
-
-
 		if (millis() - prev_time >= (unsigned long) 500)
 		{
 			prev_time = millis();
-			lc.clearDisplay(0);
+			for(int i = 1; i < 4; i++)
+      {
+        lc.clearDisplay(i);
+      }
 
-			lc.setLed(0, fruit[1], fruit[0], 1);
+			lc.setLed(3 - fruit[0]/8, fruit[1], fruit[0] % 8, 1); 
 
       //SNAKE MOVEMENT
       uint8_t last_x = pos_x[snake_size - 1];
@@ -440,19 +415,31 @@ int snake()
 			if (fruit[1] == pos_y[0] && fruit[0] == pos_x[0])	//SNAKE EATS FRUIT 
 			{
 				snake_size += 1;
-				fruit[0] = random(8);
+				fruit[0] = random(24);
 				fruit[1] = random(8);
 				pos_x[snake_size - 1] = last_x;
 				pos_y[snake_size - 1] = last_y;
+
+        //DISPLAY POINTS
+        uint8_t pts = snake_size - 4; 
+        uint8_t p1 = pts / 10;
+        uint8_t p2 = pts - p1 * 10;
+      
+        byte x[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        for (int i = 0; i < 5; i++) 
+        {
+          x[i + 2] = 16 * numbers[p1][i] + numbers[p2][i]; // *16 - shift register - 4 bits left
+        }
+        print_pattern(x, sizeof(x), 0);
 			}
 
 			if (dir == "left") 
 			{
-				pos_x[0] - 1 >= 0 ? pos_x[0] -= 1 : pos_x[0] = 7;
+				pos_x[0] - 1 >= 0 ? pos_x[0] -= 1 : pos_x[0] = 23;
 			} 
 			else if (dir == "right") 
 			{
-				pos_x[0] + 1 <= 7 ? pos_x[0] += 1 : pos_x[0] = 0;
+				pos_x[0] + 1 <= 23 ? pos_x[0] += 1 : pos_x[0] = 0;
 			} 
 			else if (dir == "up") 
 			{
@@ -463,9 +450,9 @@ int snake()
 				pos_y[0] + 1 <= 7 ? pos_y[0] += 1 : pos_y[0] = 0;
 			}
      
-			for (int i = 0; i < snake_size; i++) 
+			for (int i = 0; i < snake_size - 1; i++) 
       {
-				lc.setLed(0, pos_y[i], pos_x[i], 1);
+        lc.setLed(3 - pos_x[i]/8, pos_y[i], pos_x[i]%8, 1);
 			}
 
       //GAME END
@@ -480,20 +467,35 @@ int snake()
         }
       }
 		}
-  }
-  lc.clearDisplay(0);
-
-  //DISPLAY POINTS
-  uint8_t pts = snake_size - 3; 
-  uint8_t p1 = pts / 10;
-  uint8_t p2 = pts - p1 * 10;
+    uint8_t dir_cmd = 0;
+    if(Serial.available())
+    {
+      dir_cmd = Serial.read();
+    }
       
-  byte x[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-  for (int i = 0; i < 5; i++) 
-  {
-    x[i + 2] = 16 * numbers[p1][i] + numbers[p2][i]; // *16 - shift register - 4 bits left
-  }
-  print_pattern(x, sizeof(x), 0);
+      if((digitalRead(right_switch) == 0 or dir_cmd == 114) and dir != "left")
+      {
+        dir = "right";
+      }
+      else if((digitalRead(left_switch) == 0 or dir_cmd == 108) and dir != "right")
+      {
+        dir = "left";
+      }
+      else if((digitalRead(up_switch) == 0 or dir_cmd == 117) and dir != "down")
+      {
+        dir = "up";
+      }
+      else if((digitalRead(down_switch) == 0 or dir_cmd == 100) and dir != "up")
+      {
+        dir = "down";
+      }
+      else if(dir_cmd == 113) //'q'
+      {
+        return 0; 
+      }
+    }  
+  
+  lc.clearDisplay(0);
 
   //WAIT 5SEC
   delay(5000);
@@ -519,8 +521,7 @@ void clear()
   for (int i=0; i<4; i++)
   {
     lc.clearDisplay(i);
-    matrixes[i] = 0;
-    
+    matrixes[i] = 0;  
   }
 }
 
