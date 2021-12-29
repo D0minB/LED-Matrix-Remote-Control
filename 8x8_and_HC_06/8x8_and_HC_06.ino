@@ -101,6 +101,8 @@ void setup()
   pinMode(right_switch, INPUT_PULLUP);
   pinMode(up_switch, INPUT_PULLUP);
   pinMode(down_switch, INPUT_PULLUP);
+
+  Serial.begin(9600);
 }
 
 void loop()
@@ -109,7 +111,7 @@ void loop()
   {
     receive_data();
   }
-
+  
   //GIFs
   for (int i = 0; i < modes.length(); i++)
   {
