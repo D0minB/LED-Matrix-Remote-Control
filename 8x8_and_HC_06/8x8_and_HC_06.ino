@@ -3,6 +3,7 @@
 #define DIN 10
 #define CS 9
 #define CLK 8
+
 #define left_switch 11
 #define right_switch 13
 #define up_switch 12
@@ -95,8 +96,7 @@ void setup()
   }
 
   randomSeed(analogRead(0)); //random generator initialization, noise from analog input
-
-  Serial.begin(9600);
+  
   pinMode(left_switch, INPUT_PULLUP);
   pinMode(right_switch, INPUT_PULLUP);
   pinMode(up_switch, INPUT_PULLUP);
@@ -302,10 +302,10 @@ void draw()
         uint8_t v = random(100); //<0;99>
         uint8_t v1 = v / 10;
         uint8_t v2 = v % 10;
-        byte x[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        byte x[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         for (int i = 0; i < 5; i++)
         {
-          x[i + 2] = 16 * numbers[v1][i] + numbers[v2][i]; // *16 - shift register - 4 bits left
+          x[i + 2] = (numbers[v1][i] << 4) + numbers[v2][i]; 
         }
         print_pattern(x, sizeof(x), j);
       }
@@ -398,22 +398,25 @@ int snake()
   uint8_t fruit[3] = {(uint8_t) random(24), (uint8_t) random(8)};
   uint8_t snake_size = 4;
   String dir = "left";
-  bool right = false;
-  bool left = false;
   unsigned long prev_time = millis();
   bool end_game = false;
+
+  clear();
+
+  //SNAKE FIRST DRAW
+  for (int i = 0; i < snake_size - 1; i++)
+  {
+    lc.setLed(3 - pos_x[i] / 8, pos_y[i], pos_x[i] % 8, 1);
+  }
+
+  //FRUIT FIRST DRAW
+  lc.setLed(3 - fruit[0] / 8, fruit[1], fruit[0] % 8, 1);
 
   while (!end_game)
   {
     if (millis() - prev_time >= (unsigned long) 500)
     {
       prev_time = millis();
-      for (int i = 1; i < 4; i++)
-      {
-        lc.clearDisplay(i);
-      }
-
-      lc.setLed(3 - fruit[0] / 8, fruit[1], fruit[0] % 8, 1);
 
       //SNAKE MOVEMENT
       uint8_t last_x = pos_x[snake_size - 1];
@@ -430,6 +433,9 @@ int snake()
         snake_size += 1;
         fruit[0] = random(24);
         fruit[1] = random(8);
+        //FRUIT DRAW
+        lc.setLed(3 - fruit[0] / 8, fruit[1], fruit[0] % 8, 1);
+
         pos_x[snake_size - 1] = last_x;
         pos_y[snake_size - 1] = last_y;
 
@@ -438,10 +444,10 @@ int snake()
         uint8_t p1 = pts / 10;
         uint8_t p2 = pts - p1 * 10;
 
-        byte x[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        byte x[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         for (int i = 0; i < 5; i++)
         {
-          x[i + 2] = 16 * numbers[p1][i] + numbers[p2][i]; // *16 - shift register - 4 bits left
+          x[i + 2] = (numbers[p1][i] << 4) + numbers[p2][i]; //
         }
         print_pattern(x, sizeof(x), 0);
       }
@@ -463,10 +469,11 @@ int snake()
         pos_y[0] + 1 <= 7 ? pos_y[0] += 1 : pos_y[0] = 0;
       }
 
-      for (int i = 0; i < snake_size - 1; i++)
-      {
-        lc.setLed(3 - pos_x[i] / 8, pos_y[i], pos_x[i] % 8, 1);
-      }
+      //UPDATE SNAKE HEAD
+      lc.setLed(3 - pos_x[0] / 8, pos_y[0], pos_x[0] % 8, 1);
+
+      //UPDATE LAST SNAKE PART
+      lc.setLed(3 - pos_x[snake_size - 1] / 8, pos_y[snake_size - 1], pos_x[snake_size - 1] % 8, 0);
 
       //GAME END
       for (int i = 0; i < snake_size; i++)
@@ -508,11 +515,11 @@ int snake()
       return 0;
     }
   }
-
-  lc.clearDisplay(0);
-
   //WAIT 5SEC
   delay(5000);
+  
+  //CLEAR POINTS DISPLAY
+  lc.clearDisplay(0);
 
   //NEW GAME
   snake();
