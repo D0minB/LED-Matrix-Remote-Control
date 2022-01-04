@@ -433,8 +433,30 @@ int snake()
       if (fruit[1] == pos_y[0] && fruit[0] == pos_x[0])	//SNAKE EATS FRUIT
       {
         snake_size += 1;
-        fruit[0] = random(24);
-        fruit[1] = random(8);
+
+        bool unique = 0;
+
+        while (!unique)
+        {
+          fruit[0] = random(24);
+          fruit[1] = random(8);
+          bool unique_x = 1;
+          bool unique_y = 1;
+          
+          for(int i=0; i<snake_size; i++)
+          {
+            if(pos_x[i] == fruit[0])
+            {
+              unique_x = 0;
+            }
+            if(pos_y[i] == fruit[1])
+            {
+              unique_y = 0;
+            }
+          }
+          unique = unique_x and unique_y;
+        }
+        
         //FRUIT DRAW
         lc.setLed(3 - fruit[0] / 8, fruit[1], fruit[0] % 8, 1);
 
