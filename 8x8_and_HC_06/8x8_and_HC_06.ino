@@ -14,8 +14,7 @@ LedControl lc = LedControl(DIN, CLK, CS, 4);  //LedControl(dataPin,clockPin,csPi
 String modes = "    ";  //'h' - heart, 'p' - pacman, 's' - stairs, 't' - text
 
 //patterns
-byte heart1[7] = {0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18};
-byte heart2[7] = {0x66, 0x99, 0x81, 0x81, 0x42, 0x24, 0x18};
+byte heart_pattern[7] = {0x66, 0x99, 0x81, 0x81, 0x42, 0x24, 0x18};
 byte pacman1[7] = {0x38, 0x44, 0x88, 0x90, 0x88, 0x44, 0x38};
 byte pacman2[7] = {0x38, 0x44, 0x82, 0x82, 0x82, 0x44, 0x38};
 byte zero[5] = {0x07, 0x05, 0x05, 0x05, 0x07};
@@ -254,7 +253,7 @@ void heart(bool state)
   {
     if (modes[i] == 'h')
     {
-      state == 1 ? print_pattern(heart2, sizeof(heart2), i) : print_pattern(heart1, sizeof(heart1), i);
+      state == 1 ? print_pattern(heart_pattern, sizeof(heart_pattern), i) : lc.clearDisplay(i);
     }
   }
   heart_state = !state; //TOGGLE HEART STATE
@@ -432,8 +431,6 @@ int snake()
 
       if (fruit[1] == pos_y[0] && fruit[0] == pos_x[0])	//SNAKE EATS FRUIT
       {
-        snake_size += 1;
-
         bool unique = 0;
 
         while (!unique)
@@ -456,6 +453,8 @@ int snake()
           }
           unique = unique_x and unique_y;
         }
+
+        snake_size += 1;
         
         //FRUIT DRAW
         lc.setLed(3 - fruit[0] / 8, fruit[1], fruit[0] % 8, 1);
