@@ -1,8 +1,11 @@
 # LED Matrix Remote Control
  
-Project about remote controlled LED Matrix via Bluetooth
+Project about remote controlled LED Matrix via Bluetooth by Android app  
 
-[![Watch the video](https://i.imgur.com/9fn3ewG.png)](https://www.youtube.com/watch?v=4OuHYUdm94s)
+  
+  
+## Video
+[![Watch the video](https://i.imgur.com/dVSngLd.png)](https://www.youtube.com/watch?v=7v_MBC8TQDw)
 
 ## Components
 - ATMEGA 328P
