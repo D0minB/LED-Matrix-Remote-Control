@@ -2,6 +2,8 @@
  
 Project about remote controlled LED Matrix via Bluetooth by Android app  
 
+# Diagram
+![Diagram](./diagram_Eagle.jpg)
   
   
 ## Video
